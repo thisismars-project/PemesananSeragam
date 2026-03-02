@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Form Pemesanan Seragam</title>
+<title>Form Pembelian</title>
 
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <style>
 body{
   margin:0;
-  font-family:-apple-system,BlinkMacSystemFont;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
   background:#f2f2f2;
 }
 
@@ -77,16 +77,21 @@ h2{
 
 <script>
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwGcMbpH1ywQSzru6LjMIH4JO35rNC0MPXSuFP5CzAz7Rb5slJUaltqg6fUgPUNSW4J/exec;
+const API_URL = https://script.google.com/macros/s/AKfycbzMb7Y-zppV06YBUQgh4d5SX6tsBulOs3FM1vGQW0gzKm6ZajH_6PHn0m3IXxUM5Ipr/exec;
 
 let products = {};
 
 async function loadProducts(){
-  const res = await fetch(API_URL);
-  const data = await res.json();
-  console.log("DATA DARI API:", data);
-  products = data;
-  addItem();
+  try{
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    console.log("Products:", data);
+    products = data;
+    addItem();
+  }catch(err){
+    alert("Gagal ambil produk. Cek API.");
+    console.log(err);
+  }
 }
 
 function addItem(){
@@ -206,7 +211,7 @@ function downloadInv(){
   });
 }
 
-window.onload=loadProducts;
+window.onload = loadProducts;
 
 </script>
 
