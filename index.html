@@ -1,219 +1,196 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+/* ==============================
+   FRONTEND SCRIPT
+   CONNECT TO APPS SCRIPT API
+============================== */
 
-<title>Form Pembelian</title>
+const API_URL = "PASTE_WEB_APP_URL_HERE"; // <-- GANTI DENGAN URL WEB APP KAMU
 
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+let produkData = [];
+let siswaData = [];
+let items = [];
 
-<style>
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  background:#f2f2f2;
+document.addEventListener("DOMContentLoaded", () => {
+  loadData();
+  addItem();
+});
+
+async function loadData() {
+  const produkRes = await fetch(API_URL + "?action=getProduk");
+  produkData = await produkRes.json();
+
+  const siswaRes = await fetch(API_URL + "?action=getSiswa");
+  siswaData = await siswaRes.json();
+
+  populateNamaDropdown();
 }
 
-.container{
-  max-width:480px;
-  margin:auto;
-  padding:20px;
-}
-  
-.card{
-  background:white;
-  padding:15px;
-  border-radius:14px;
-  margin-bottom:15px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.05);
-}
+function populateNamaDropdown() {
+  const select = document.getElementById("namaSelect");
+  select.innerHTML = "";
 
-input,select{
-  width:100%;
-  padding:12px;
-  margin-top:8px;
-  font-size:16px;
-  border-radius:8px;
-  border:1px solid #ddd;
-}
+  const siswaNames = siswaData.map(s => s.nama);
 
-button{
-  width:100%;
-  padding:14px;
-  margin-top:10px;
-  border:none;
-  border-radius:12px;
-  font-size:16px;
-  background:black;
-  color:white;
-}
+  const optionBaru = document.createElement("option");
+  optionBaru.value = "baru";
+  optionBaru.text = "Siswa Baru";
+  select.appendChild(optionBaru);
 
-h2{
-  text-align:center;
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<h2>Form Pembelian</h2>
-
-<div class="card">
-<input id="nama" placeholder="Nama">
-<input id="kelas" placeholder="Kelas">
-</div>
-
-<div id="items"></div>
-
-<button onclick="addItem()">+ Tambah Produk</button>
-<button onclick="submitOrder()">Submit</button>
-
-<div id="invoice"></div>
-
-</div>
-
-<script>
-
-const API_URL = https://script.google.com/macros/s/AKfycbzMb7Y-zppV06YBUQgh4d5SX6tsBulOs3FM1vGQW0gzKm6ZajH_6PHn0m3IXxUM5Ipr/exec?action=products;
-
-let products = {};
-
-async function loadProducts(){
-  try{
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    console.log("Products:", data);
-    products = data;
-    addItem();
-  }catch(err){
-    alert("Gagal ambil produk. Cek API.");
-    console.log(err);
-  }
-}
-
-function addItem(){
-  const div=document.createElement("div");
-  div.className="card";
-
-  div.innerHTML=`
-    <select onchange="updateSize(this)">
-      <option value="">Pilih Produk</option>
-      ${Object.keys(products).map(p=>`<option value="${p}">${p}</option>`).join("")}
-    </select>
-
-    <select class="sizeSelect">
-      <option value="">Pilih Size</option>
-    </select>
-
-    <input type="number" min="1" placeholder="Qty">
-  `;
-
-  document.getElementById("items").appendChild(div);
-}
-
-function updateSize(select){
-  const sizeSelect=select.parentElement.querySelector(".sizeSelect");
-  sizeSelect.innerHTML=`<option value="">Pilih Size</option>`;
-
-  products[select.value]?.forEach(s=>{
-    sizeSelect.innerHTML+=`
-      <option value="${s.size}" data-price="${s.price}">
-        ${s.size} - Rp${s.price}
-      </option>
-    `;
+  siswaNames.forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.text = name;
+    select.appendChild(opt);
   });
+
+  select.addEventListener("change", handleNamaChange);
 }
 
-async function submitOrder(){
+function handleNamaChange(e) {
+  const val = e.target.value;
+  const container = document.getElementById("newStudentContainer");
 
-  const nama=document.getElementById("nama").value;
-  const kelas=document.getElementById("kelas").value;
+  if (val === "baru") {
+    container.style.display = "block";
+  } else {
+    container.style.display = "none";
 
-  const cards=document.querySelectorAll("#items .card");
-  let items=[];
-
-  cards.forEach(c=>{
-    const selects=c.querySelectorAll("select");
-    const product=selects[0]?.value;
-    const sizeSelect=selects[1];
-    const size=sizeSelect?.value;
-    const price=sizeSelect?.selectedOptions[0]?.dataset.price;
-    const qty=c.querySelector("input")?.value;
-
-    if(product && size && qty){
-      const subtotal=price*qty;
-      items.push({
-        product,
-        size,
-        qty:+qty,
-        price:+price,
-        subtotal
-      });
+    const siswa = siswaData.find(s => s.nama === val);
+    if (siswa) {
+      document.getElementById("kelasInput").value = siswa.kelas;
     }
-  });
-
-  if(items.length===0){
-    alert("Isi produk dulu ya");
-    return;
   }
-
-  const res=await fetch(API_URL,{
-    method:"POST",
-    body:JSON.stringify({nama,kelas,items})
-  });
-
-  const data=await res.json();
-
-  showInvoice(data.invoice,nama,kelas,items);
 }
 
-function showInvoice(inv,nama,kelas,items){
+function addItem() {
+  const container = document.getElementById("itemsContainer");
 
-  let total=0;
+  const itemIndex = items.length;
+  items.push({});
 
-  let html=`
-  <div id="invBox" class="card">
-    <h3>Invoice #${inv}</h3>
-    <p>${nama} - ${kelas}</p>
+  const div = document.createElement("div");
+  div.className = "item";
+  div.innerHTML = `
     <hr>
+    <label>Nama Barang</label>
+    <select class="barang"></select>
+
+    <label>Size</label>
+    <select class="size"></select>
+
+    <label>Harga</label>
+    <input type="text" class="harga" readonly>
+
+    <label>Qty</label>
+    <input type="number" class="qty" value="1" min="1">
   `;
 
-  items.forEach(i=>{
-    html+=`
+  container.appendChild(div);
+
+  const barangSelect = div.querySelector(".barang");
+  const sizeSelect = div.querySelector(".size");
+  const hargaInput = div.querySelector(".harga");
+
+  populateBarang(barangSelect);
+
+  barangSelect.addEventListener("change", () => {
+    populateSize(barangSelect.value, sizeSelect);
+  });
+
+  sizeSelect.addEventListener("change", () => {
+    const harga = getHarga(barangSelect.value, sizeSelect.value);
+    hargaInput.value = harga;
+  });
+
+  document.getElementById("itemsContainer").appendChild(div);
+}
+
+function populateBarang(select) {
+  const uniqueBarang = [...new Set(produkData.map(p => p.nama))];
+  uniqueBarang.forEach(nama => {
+    const opt = document.createElement("option");
+    opt.value = nama;
+    opt.text = nama;
+    select.appendChild(opt);
+  });
+}
+
+function populateSize(barang, sizeSelect) {
+  sizeSelect.innerHTML = "";
+  const sizes = produkData.filter(p => p.nama === barang).map(p => p.size);
+  sizes.forEach(size => {
+    const opt = document.createElement("option");
+    opt.value = size;
+    opt.text = size;
+    sizeSelect.appendChild(opt);
+  });
+}
+
+function getHarga(barang, size) {
+  const item = produkData.find(p => p.nama === barang && p.size === size);
+  return item ? item.harga : 0;
+}
+
+async function submitOrder(e) {
+  try {
+    const payload = JSON.parse(e.postData?.contents || '{}');
+    const sheet = getSheet("Order");
+
+    const timestamp = new Date();
+    const invoice = generateInvoice(sheet);
+
+    payload.items.forEach(item => {
+      const total = item.qty * item.harga;
+
+      sheet.appendRow([
+        timestamp,
+        invoice,
+        payload.nama,
+        payload.kelas,
+        item.barang,
+        item.size,
+        item.qty,
+        item.harga,
+        total
+      ]);
+    });
+
+    return jsonResponse({ status: "success", invoice: invoice });
+  } catch (err) {
+    return jsonResponse({ status: "error", message: err.toString() });
+  }
+}
+
+function showSummary(payload, invoice) {
+  document.getElementById("page1").style.display = "none";
+  document.getElementById("page2").style.display = "block";
+
+  const summary = document.getElementById("summary");
+  summary.innerHTML = `<h3>No Invoice: ${invoice}</h3>`;
+
+  payload.items.forEach(item => {
+    const total = item.qty * item.harga;
+    summary.innerHTML += `
       <p>
-      ${i.product} (${i.size})<br>
-      ${i.qty} x Rp${i.price} = Rp${i.subtotal}
+        ${item.barang}<br>
+        ${item.qty} x ${item.harga} = ${total}
       </p>
     `;
-    total+=i.subtotal;
   });
-
-  html+=`
-    <hr>
-    <h3>Total: Rp${total}</h3>
-  </div>
-
-  <button onclick="downloadInv()">Download Bukti (JPG)</button>
-  `;
-
-  document.getElementById("invoice").innerHTML=html;
 }
 
-function downloadInv(){
-  html2canvas(document.getElementById("invBox")).then(canvas=>{
-    const link=document.createElement("a");
-    link.download="invoice.jpg";
-    link.href=canvas.toDataURL();
+function downloadSummary() {
+  html2canvas(document.getElementById("page2")).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "rekap.jpg";
+    link.href = canvas.toDataURL("image/jpeg");
     link.click();
   });
 }
 
-window.onload = loadProducts;
+function resetForm() {
+  location.reload();
+}
 
-</script>
-
-</body>
-</html>
+function exitWeb() {
+  window.close();
+}
