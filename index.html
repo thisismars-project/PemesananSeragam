@@ -77,13 +77,13 @@ h2{
 
 <script>
 
-const API_URL = https://script.google.com/macros/s/AKfycbzMb7Y-zppV06YBUQgh4d5SX6tsBulOs3FM1vGQW0gzKm6ZajH_6PHn0m3IXxUM5Ipr/exec;
+const API_URL = https://script.google.com/macros/s/AKfycbzMb7Y-zppV06YBUQgh4d5SX6tsBulOs3FM1vGQW0gzKm6ZajH_6PHn0m3IXxUM5Ipr/exec?action=products;
 
 let products = {};
 
 async function loadProducts(){
   try{
-    const res = await fetch(API_URL + "?action=products");
+    const res = await fetch(API_URL);
     const data = await res.json();
     console.log("Products:", data);
     products = data;
