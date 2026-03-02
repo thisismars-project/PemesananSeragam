@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Form Pembelian</title>
+
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont;
+  background:#f2f2f2;
+}
+
+.container{
+  max-width:480px;
+  margin:auto;
+  padding:20px;
+}
+
+.card{
+  background:white;
+  padding:15px;
+  border-radius:14px;
+  margin-bottom:15px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+input,select{
+  width:100%;
+  padding:12px;
+  margin-top:8px;
+  font-size:16px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  background:black;
+  color:white;
+}
+
+h2{
+  text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Form Pembelian</h2>
+
+<div class="card">
+<input id="nama" placeholder="Nama">
+<input id="kelas" placeholder="Kelas">
+</div>
+
+<div id="items"></div>
+
+<button onclick="addItem()">+ Tambah Produk</button>
+<button onclick="submitOrder()">Submit</button>
+
+<div id="invoice"></div>
+
+</div>
+
+<script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycbwGcMbpH1ywQSzru6LjMIH4JO35rNC0MPXSuFP5CzAz7Rb5slJUaltqg6fUgPUNSW4J/exec;
+
+let products = {};
+
+async function loadProducts(){
+  const res = await fetch(API_URL);
+  products = await res.json();
+  addItem();
+}
+
+function addItem(){
+  const div=document.createElement("div");
+  div.className="card";
+
+  div.innerHTML=`
+    <select onchange="updateSize(this)">
+      <option value="">Pilih Produk</option>
+      ${Object.keys(products).map(p=>`<option value="${p}">${p}</option>`).join("")}
+    </select>
+
+    <select class="sizeSelect">
+      <option value="">Pilih Size</option>
+    </select>
+
+    <input type="number" min="1" placeholder="Qty">
+  `;
+
+  document.getElementById("items").appendChild(div);
+}
+
+function updateSize(select){
+  const sizeSelect=select.parentElement.querySelector(".sizeSelect");
+  sizeSelect.innerHTML=`<option value="">Pilih Size</option>`;
+
+  products[select.value]?.forEach(s=>{
+    sizeSelect.innerHTML+=`
+      <option value="${s.size}" data-price="${s.price}">
+        ${s.size} - Rp${s.price}
+      </option>
+    `;
+  });
+}
+
+async function submitOrder(){
+
+  const nama=document.getElementById("nama").value;
+  const kelas=document.getElementById("kelas").value;
+
+  const cards=document.querySelectorAll("#items .card");
+  let items=[];
+
+  cards.forEach(c=>{
+    const selects=c.querySelectorAll("select");
+    const product=selects[0]?.value;
+    const sizeSelect=selects[1];
+    const size=sizeSelect?.value;
+    const price=sizeSelect?.selectedOptions[0]?.dataset.price;
+    const qty=c.querySelector("input")?.value;
+
+    if(product && size && qty){
+      const subtotal=price*qty;
+      items.push({
+        product,
+        size,
+        qty:+qty,
+        price:+price,
+        subtotal
+      });
+    }
+  });
+
+  if(items.length===0){
+    alert("Isi produk dulu ya");
+    return;
+  }
+
+  const res=await fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify({nama,kelas,items})
+  });
+
+  const data=await res.json();
+
+  showInvoice(data.invoice,nama,kelas,items);
+}
+
+function showInvoice(inv,nama,kelas,items){
+
+  let total=0;
+
+  let html=`
+  <div id="invBox" class="card">
+    <h3>Invoice #${inv}</h3>
+    <p>${nama} - ${kelas}</p>
+    <hr>
+  `;
+
+  items.forEach(i=>{
+    html+=`
+      <p>
+      ${i.product} (${i.size})<br>
+      ${i.qty} x Rp${i.price} = Rp${i.subtotal}
+      </p>
+    `;
+    total+=i.subtotal;
+  });
+
+  html+=`
+    <hr>
+    <h3>Total: Rp${total}</h3>
+  </div>
+
+  <button onclick="downloadInv()">Download Bukti (JPG)</button>
+  `;
+
+  document.getElementById("invoice").innerHTML=html;
+}
+
+function downloadInv(){
+  html2canvas(document.getElementById("invBox")).then(canvas=>{
+    const link=document.createElement("a");
+    link.download="invoice.jpg";
+    link.href=canvas.toDataURL();
+    link.click();
+  });
+}
+
+window.onload=loadProducts;
+
+</script>
+
+</body>
+</html>
