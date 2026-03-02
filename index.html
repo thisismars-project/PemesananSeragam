@@ -20,7 +20,7 @@ body{
   margin:auto;
   padding:20px;
 }
-
+  
 .card{
   background:white;
   padding:15px;
@@ -83,7 +83,7 @@ let products = {};
 
 async function loadProducts(){
   try{
-    const res = await fetch(API_URL);
+    const res = await fetch(API_URL + "?action=products");
     const data = await res.json();
     console.log("Products:", data);
     products = data;
