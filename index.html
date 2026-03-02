@@ -83,7 +83,9 @@ let products = {};
 
 async function loadProducts(){
   const res = await fetch(API_URL);
-  products = await res.json();
+  const data = await res.json();
+  console.log("DATA DARI API:", data);
+  products = data;
   addItem();
 }
 
